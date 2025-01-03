@@ -1,0 +1,8 @@
+rules:
+  commandPrefixes:
+    "builders-homework/*.py": "source /Users/binbin.dai/repos/.venv/bin/activate && "
+
+  # Other general rules you might want to keep
+  allowedCommands:
+    - "python"
+    - "pip" 
