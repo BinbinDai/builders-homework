@@ -2,3 +2,6 @@ requests==2.31.0
 beautifulsoup4==4.12.2
 pandas==2.1.4
 lxml==4.9.3 
+openai==1.6.1
+python-dotenv==1.0.0
+httpx==0.25.2 
