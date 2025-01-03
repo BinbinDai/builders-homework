@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-import time
 import json
 
 def scrape_cvpr_papers():
@@ -20,43 +19,45 @@ def scrape_cvpr_papers():
         
         soup = BeautifulSoup(response.text, 'lxml')
         
-        # The papers are in dt elements
-        paper_elements = soup.find_all('dt')
+        # Find all paper titles (dt elements with class ptitle)
+        paper_elements = soup.find_all('dt', class_='ptitle')
         
         for paper in paper_elements:
-            # Get title (it's the first text before any links)
-            title = paper.get_text().split('[')[0].strip()
+            # Get title from the a tag within dt
+            title_tag = paper.find('a')
+            title = title_tag.get_text().strip() if title_tag else ''
             
-            # Get authors (they're in the next dd element)
-            authors_element = paper.find_next_sibling('dd')
-            authors = authors_element.get_text().strip() if authors_element else ''
+            # Get the next two dd elements
+            dd_elements = paper.find_next_siblings('dd', limit=2)
             
-            # Get links (pdf, supplementary, arxiv)
-            links = paper.find_all('a')
-            paper_link = ''
-            supp_link = ''
-            arxiv_link = ''
+            if len(dd_elements) >= 2:
+                # First dd contains author forms
+                authors_dd = dd_elements[0]
+                # Extract author names from the forms
+                author_links = authors_dd.find_all('a', onclick=True)
+                authors = [link.get_text().strip() for link in author_links]
+                authors_str = ', '.join(authors)
+                
+                # Second dd contains links
+                links_dd = dd_elements[1]
+                links = links_dd.find_all('a')
+                
+                paper_link = ''
+                supp_link = ''
+                
+                for link in links:
+                    if link.get_text().lower() == 'pdf':
+                        paper_link = 'https://openaccess.thecvf.com' + link['href']
+                    elif link.get_text().lower() == 'supp':
+                        supp_link = 'https://openaccess.thecvf.com' + link['href']
             
-            for link in links:
-                link_text = link.get_text().lower()
-                if 'pdf' in link_text:
-                    paper_link = 'https://openaccess.thecvf.com/' + link['href']
-                elif 'supp' in link_text:
-                    supp_link = 'https://openaccess.thecvf.com/' + link['href']
-                elif 'arxiv' in link_text:
-                    arxiv_link = link['href']
-            
-            paper_info = {
-                'title': title,
-                'authors': authors,
-                'paper_link': paper_link,
-                'supplementary_link': supp_link,
-                'arxiv_link': arxiv_link
-            }
-            papers.append(paper_info)
-            
-            # Add a small delay to be respectful to the server
-            time.sleep(0.5)
+                paper_info = {
+                    'title': title,
+                    'authors': authors_str,
+                    'paper_link': paper_link,
+                    'supplementary_link': supp_link
+                }
+                papers.append(paper_info)
             
     except requests.RequestException as e:
         print(f"Error fetching the webpage: {e}")
@@ -69,7 +70,12 @@ def scrape_cvpr_papers():
     if papers:
         df = pd.DataFrame(papers)
         df.to_csv('cvpr2024_papers.csv', index=False)
-        print(f"Successfully scraped {len(papers)} papers and saved to cvpr2024_papers.csv")
+        
+        # Save to JSON
+        with open('cvpr2024_papers.json', 'w') as f:
+            json.dump(papers, f, indent=2)
+            
+        print(f"Successfully scraped {len(papers)} papers and saved to CSV and JSON files")
     else:
         print("No papers were found to scrape")
 
