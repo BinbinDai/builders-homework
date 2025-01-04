@@ -5,3 +5,4 @@ lxml==4.9.3
 openai==1.6.1
 python-dotenv==1.0.0
 httpx==0.25.2 
+selenium==4.15.0
